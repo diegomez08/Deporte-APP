@@ -9,14 +9,16 @@ st.set_page_config(page_title="Registro de Deporte", page_icon="🏋️‍♂️
 st.title("🏋️‍♂️ REGISTRO DE ENTRENAMIENTO")
 
 # 1. Conexión con Google Sheets
-# Nota: La URL se toma automáticamente de los "Secrets" que configuramos
+# Ahora usamos la configuración definida en [connections.gsheets]
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 2. Leer los datos existentes para mostrarlos
+# 2. Leer los datos
 try:
-    df = conn.read(ttl="0s") # ttl="0s" obliga a leer datos frescos sin usar caché
+    # Intentamos leer la hoja usando la URL de los secrets
+    df = conn.read(ttl="0s")
 except Exception as e:
-    st.error("No se pudo conectar con la hoja. Revisa los Secrets.")
+    st.error(f"Error de conexión: {e}")
+    # Si falla, creamos un DF vacío para que la app no explote
     df = pd.DataFrame(columns=['Fecha', 'Deporte', 'Minutos', 'Comentarios'])
 
 # 3. Formulario de entrada
