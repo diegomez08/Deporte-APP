@@ -56,6 +56,13 @@ with st.expander("➕ REGISTRAR ENTRENAMIENTO", expanded=True):
             else:
                 st.warning("Indica los minutos realizados")
 
+st.download_button(
+    label="📥 DESCARGAR BACKUP CSV",
+    data=df.to_csv(index=False).encode('utf-8'),
+    file_name='registro_deporte.csv',
+    mime='text/csv',
+)
+
 # --- VISUALIZACIÓN ---
 st.write("### 📊 ÚLTIMOS REGISTROS")
 
