@@ -3,59 +3,61 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# Configuración de la página
 st.set_page_config(page_title="Registro de Deporte", page_icon="🏋️‍♂️")
-
 st.title("🏋️‍♂️ REGISTRO DE ENTRENAMIENTO")
 
-# 1. Conexión con Google Sheets
-# Ahora usamos la configuración definida en [connections.gsheets]
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 2. Leer los datos
+# Leer datos forzando que no use caché para ver cambios al instante
 try:
-    # Intentamos leer la hoja usando la URL de los secrets
     df = conn.read(ttl="0s")
+    if not df.empty:
+        # CORRECCIÓN DE DECIMALES: Convertimos a entero para que no salga .0
+        df['Minutos'] = pd.to_numeric(df['Minutos'], errors='coerce').fillna(0).astype(int)
 except Exception as e:
-    st.error(f"Error de conexión: {e}")
-    # Si falla, creamos un DF vacío para que la app no explote
+    st.error(f"Error al leer datos: {e}")
     df = pd.DataFrame(columns=['Fecha', 'Deporte', 'Minutos', 'Comentarios'])
 
-# 3. Formulario de entrada
+# Formulario de entrada
 with st.form(key='deporte_form'):
-    fecha = st.date_input("Fecha", value=datetime.now())
-    deporte = st.selectbox("Deporte", ["Padel", "Bici", "Flexiones", "Abdominales", "Running", "Gym"])
-    minutos = st.number_input("Minutos", min_value=1, step=5)
-    comentarios = st.text_area("Comentarios (opcional)")
+    col1, col2 = st.columns(2)
+    with col1:
+        fecha = st.date_input("Fecha", value=datetime.now())
+        deporte = st.selectbox("Deporte", ["Padel", "Bici", "Flexiones", "Abdominales", "Running", "Gym"])
+    with col2:
+        minutos = st.number_input("Minutos", min_value=1, step=1, value=30)
     
-    submit_button = st.form_submit_button(label='GUARDAR SESIÓN')
+    comentarios = st.text_area("Comentarios (opcional)")
+    submit_button = st.form_submit_button(label='🚀 GUARDAR SESIÓN')
 
-# 4. Lógica de guardado
 if submit_button:
-    # Crear el nuevo registro
     nueva_fila = pd.DataFrame([{
         "Fecha": fecha.strftime('%Y-%m-%d'),
         "Deporte": deporte,
-        "Minutos": minutos,
+        "Minutos": int(minutos), # Aseguramos entero aquí también
         "Comentarios": comentarios
     }])
     
-    # Combinar con los datos actuales
     updated_df = pd.concat([df, nueva_fila], ignore_index=True)
-    
-    # Actualizar la hoja de Google Sheets
     conn.update(data=updated_df)
-    
-    st.success("✅ ¡Entrenamiento guardado en Google Sheets!")
-    st.balloons()
-    # Forzar recarga para mostrar los datos nuevos
+    st.success("✅ Guardado en Google Sheets")
     st.rerun()
 
-# 5. Visualización de los últimos registros
+# Visualización y Botón de Borrar
 st.markdown("---")
 st.subheader("📊 ÚLTIMOS REGISTROS")
+
 if not df.empty:
-    # Mostramos los últimos 10 registros ordenados por fecha descendente
+    # Mostramos la tabla limpia
     st.table(df.sort_index(ascending=False).head(10))
+    
+    # BOTÓN DE BORRAR ÚLTIMO REGISTRO
+    st.write("")
+    if st.button("🗑️ Borrar último registro"):
+        if len(df) > 0:
+            updated_df = df.drop(df.index[-1]) # Elimina la última fila
+            conn.update(data=updated_df)
+            st.warning("Registro eliminado")
+            st.rerun()
 else:
-    st.info("Aún no hay registros en la hoja de Google.")
+    st.info("No hay datos todavía.")
