@@ -3,16 +3,23 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
+# Configuración con Logo y Título
 st.set_page_config(page_title="Registro de Deporte", page_icon="🏋️‍♂️")
-st.title("🏋️‍♂️ REGISTRO DE ENTRENAMIENTO")
+
+# --- CABECERA CON LOGO ---
+col_logo, col_titulo = st.columns([1, 4])
+with col_logo:
+    # Este es un logo moderno de fitness en color rojo/negro
+    st.image("https://cdn-icons-png.flaticon.com/512/2964/2964514.png", width=80)
+with col_titulo:
+    st.title("REGISTRO DE ENTRENAMIENTO")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 1. Leer datos sin caché para actualización inmediata
+# 1. Leer datos
 try:
     df = conn.read(ttl="0s")
     if not df.empty:
-        # Limpieza de datos: Minutos a entero y Fecha a formato datetime
         df['Minutos'] = pd.to_numeric(df['Minutos'], errors='coerce').fillna(0).astype(int)
         df['Fecha'] = pd.to_datetime(df['Fecha'])
 except Exception as e:
@@ -44,23 +51,11 @@ if submit_button:
     st.success("✅ Guardado en Google Sheets")
     st.rerun()
 
-# 3. Sección de Gráficos (Estadísticas)
-if not df.empty:
-    st.markdown("---")
-    st.subheader("📈 ESTADÍSTICAS POR DEPORTE")
-    
-    # Agrupamos los minutos por cada deporte para el gráfico
-    stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
-    
-    # Mostramos un gráfico de barras sencillo y limpio
-    st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#FF4B4B')
-
-# 4. Visualización de Tabla y Botón de Borrar
+# 3. Visualización de Tabla y Botón de Borrar (ARRIBA)
 st.markdown("---")
 st.subheader("📊 ÚLTIMOS REGISTROS")
 
 if not df.empty:
-    # Mostramos la tabla (formateando la fecha para que se vea bien)
     df_display = df.copy()
     df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
     st.table(df_display.sort_index(ascending=False).head(10))
@@ -71,5 +66,15 @@ if not df.empty:
             conn.update(data=updated_df)
             st.warning("Registro eliminado")
             st.rerun()
+
+    # 4. Sección de Gráficos (AHORA ABAJO)
+    st.markdown("---")
+    st.subheader("📈 ESTADÍSTICAS TOTALES")
+    
+    # Agrupamos los minutos por cada deporte
+    stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
+    
+    # Gráfico de barras
+    st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#FF4B4B')
 else:
     st.info("No hay datos todavía.")
