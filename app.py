@@ -8,17 +8,18 @@ st.title("🏋️‍♂️ REGISTRO DE ENTRENAMIENTO")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Leer datos forzando que no use caché para ver cambios al instante
+# 1. Leer datos sin caché para actualización inmediata
 try:
     df = conn.read(ttl="0s")
     if not df.empty:
-        # CORRECCIÓN DE DECIMALES: Convertimos a entero para que no salga .0
+        # Limpieza de datos: Minutos a entero y Fecha a formato datetime
         df['Minutos'] = pd.to_numeric(df['Minutos'], errors='coerce').fillna(0).astype(int)
+        df['Fecha'] = pd.to_datetime(df['Fecha'])
 except Exception as e:
     st.error(f"Error al leer datos: {e}")
     df = pd.DataFrame(columns=['Fecha', 'Deporte', 'Minutos', 'Comentarios'])
 
-# Formulario de entrada
+# 2. Formulario de entrada
 with st.form(key='deporte_form'):
     col1, col2 = st.columns(2)
     with col1:
@@ -34,7 +35,7 @@ if submit_button:
     nueva_fila = pd.DataFrame([{
         "Fecha": fecha.strftime('%Y-%m-%d'),
         "Deporte": deporte,
-        "Minutos": int(minutos), # Aseguramos entero aquí también
+        "Minutos": int(minutos),
         "Comentarios": comentarios
     }])
     
@@ -43,19 +44,30 @@ if submit_button:
     st.success("✅ Guardado en Google Sheets")
     st.rerun()
 
-# Visualización y Botón de Borrar
+# 3. Sección de Gráficos (Estadísticas)
+if not df.empty:
+    st.markdown("---")
+    st.subheader("📈 ESTADÍSTICAS POR DEPORTE")
+    
+    # Agrupamos los minutos por cada deporte para el gráfico
+    stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
+    
+    # Mostramos un gráfico de barras sencillo y limpio
+    st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#FF4B4B')
+
+# 4. Visualización de Tabla y Botón de Borrar
 st.markdown("---")
 st.subheader("📊 ÚLTIMOS REGISTROS")
 
 if not df.empty:
-    # Mostramos la tabla limpia
-    st.table(df.sort_index(ascending=False).head(10))
+    # Mostramos la tabla (formateando la fecha para que se vea bien)
+    df_display = df.copy()
+    df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
+    st.table(df_display.sort_index(ascending=False).head(10))
     
-    # BOTÓN DE BORRAR ÚLTIMO REGISTRO
-    st.write("")
     if st.button("🗑️ Borrar último registro"):
         if len(df) > 0:
-            updated_df = df.drop(df.index[-1]) # Elimina la última fila
+            updated_df = df.drop(df.index[-1])
             conn.update(data=updated_df)
             st.warning("Registro eliminado")
             st.rerun()
