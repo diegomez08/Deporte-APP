@@ -6,25 +6,41 @@ from datetime import datetime
 # Configuración inicial
 st.set_page_config(page_title="GESPORTS - Registro", page_icon="💪")
 
-# --- ESTILO PARA FONDO CLARO (CORREGIDO) ---
+# --- ESTILO PERSONALIZADO: MODO OSCURO CON CAJA DE LOGO BLANCA ---
 st.markdown("""
     <style>
-    .stApp {
+    /* Caja blanca para el logo */
+    .logo-container {
         background-color: #FFFFFF;
+        padding: 20px;
+        border-radius: 15px;
+        display: flex;
+        justify-content: center;
+        margin-bottom: 25px;
     }
-    p, span, label, th, td { color: #1f1f1f !important; }
-    h1, h2, h3 { color: #1d6335 !important; }
-    .stButton>button { background-color: #1d6335; color: white; }
+    /* Aseguramos que el resto de la app use los colores oscuros por defecto */
+    .stApp {
+        background-color: #0e1117;
+    }
+    h1, h2, h3, p, span, label {
+        color: white !important;
+    }
+    /* Color de los títulos de las gráficas y secciones */
+    .stSubheader {
+        color: #1d6335 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CABECERA CON TU LOGO ---
-col_logo, col_titulo = st.columns([2, 3])
-with col_logo:
-    try:
-        st.image("logo.png", width=280)
-    except:
-        st.subheader("GESPORTS")
+# --- CABECERA CON CONTENEDOR BLANCO PARA EL LOGO ---
+st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+try:
+    st.image("logo.png", width=300)
+except:
+    st.subheader("GESPORTS")
+st.markdown('</div>', unsafe_allow_html=True)
+
+st.title("REGISTRO DE ENTRENAMIENTO")
 
 # --- CONEXIÓN Y LÓGICA ---
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -68,7 +84,8 @@ st.subheader("📊 ÚLTIMOS REGISTROS")
 if not df.empty:
     df_display = df.copy()
     df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
-    st.table(df_display.sort_index(ascending=False).head(10))
+    # Usamos dataframe en lugar de table para que se adapte mejor al modo oscuro
+    st.dataframe(df_display.sort_index(ascending=False).head(10), use_container_width=True)
     
     if st.button("🗑️ Borrar último registro"):
         if len(df) > 0:
