@@ -6,27 +6,27 @@ from datetime import datetime
 # Configuración inicial
 st.set_page_config(page_title="GESPORTS - Registro", page_icon="💪")
 
-# --- TRUCO PARA FONDO CLARO Y MEJORAR VISIBILIDAD ---
+# --- ESTILO PARA FONDO CLARO (CORREGIDO) ---
 st.markdown("""
     <style>
-    .main {
+    .stApp {
         background-color: #FFFFFF;
     }
-    stp { color: black; }
-    h1, h2, h3 { color: #1d6335; }
+    p, span, label, th, td { color: #1f1f1f !important; }
+    h1, h2, h3 { color: #1d6335 !important; }
+    .stButton>button { background-color: #1d6335; color: white; }
     </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True)
 
 # --- CABECERA CON TU LOGO ---
 col_logo, col_titulo = st.columns([2, 3])
 with col_logo:
     try:
-        # Cargamos el logo con un ancho adecuado
         st.image("logo.png", width=280)
     except:
         st.subheader("GESPORTS")
 
-# (Resto del código de conexión y formulario igual que antes...)
+# --- CONEXIÓN Y LÓGICA ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 try:
@@ -70,8 +70,16 @@ if not df.empty:
     df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
     st.table(df_display.sort_index(ascending=False).head(10))
     
+    if st.button("🗑️ Borrar último registro"):
+        if len(df) > 0:
+            updated_df = df.drop(df.index[-1])
+            conn.update(data=updated_df)
+            st.warning("Registro eliminado")
+            st.rerun()
+            
     st.markdown("---")
     st.subheader("📈 ESTADÍSTICAS TOTALES")
     stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
-    # Color verde corporativo de tu logo
     st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#1d6335')
+else:
+    st.info("No hay datos todavía.")
