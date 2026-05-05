@@ -2,47 +2,59 @@ import streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
+import base64
 
-# Configuración inicial
+# 1. Configuración de página
 st.set_page_config(page_title="GESPORTS - Registro", page_icon="💪")
 
-# --- ESTILO PERSONALIZADO: MODO OSCURO CON CAJA DE LOGO BLANCA ---
+# 2. Función para convertir la imagen a formato web (Base64)
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# 3. Estilo CSS para fondo oscuro y contenedor de logo blanco
 st.markdown("""
     <style>
-    /* Caja blanca para el logo */
-    .logo-container {
-        background-color: #FFFFFF;
+    .stApp {
+        background-color: #0e1117;
+    }
+    .logo-box {
+        background-color: white;
         padding: 20px;
         border-radius: 15px;
         display: flex;
         justify-content: center;
+        align-items: center;
         margin-bottom: 25px;
-    }
-    /* Aseguramos que el resto de la app use los colores oscuros por defecto */
-    .stApp {
-        background-color: #0e1117;
     }
     h1, h2, h3, p, span, label {
         color: white !important;
     }
-    /* Color de los títulos de las gráficas y secciones */
     .stSubheader {
         color: #1d6335 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- CABECERA CON CONTENEDOR BLANCO PARA EL LOGO ---
-st.markdown('<div class="logo-container">', unsafe_allow_html=True)
+# 4. Cabecera con Logo GESPORTS integrado en caja blanca
 try:
-    st.image("logo.png", width=300)
+    logo_data = get_base64_of_bin_file('logo.png')
+    st.markdown(f"""
+        <div class="logo-box">
+            <img src="data:image/png;base64,{logo_data}" width="280">
+        </div>
+    """, unsafe_allow_html=True)
 except:
-    st.subheader("GESPORTS")
-st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="logo-box">
+            <h1 style="color: #1d6335; margin: 0; font-family: sans-serif;">GESPORTS</h1>
+        </div>
+    """, unsafe_allow_html=True)
 
 st.title("REGISTRO DE ENTRENAMIENTO")
 
-# --- CONEXIÓN Y LÓGICA ---
+# 5. Conexión con Google Sheets
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 try:
@@ -53,7 +65,7 @@ try:
 except Exception as e:
     df = pd.DataFrame(columns=['Fecha', 'Deporte', 'Minutos', 'Comentarios'])
 
-# Formulario
+# 6. Formulario de entrada de datos
 with st.form(key='deporte_form'):
     col1, col2 = st.columns(2)
     with col1:
@@ -77,14 +89,13 @@ if submit_button:
     st.success("✅ Guardado correctamente")
     st.rerun()
 
-# Tabla y Gráficos
+# 7. Tabla de registros recientes
 st.markdown("---")
 st.subheader("📊 ÚLTIMOS REGISTROS")
 
 if not df.empty:
     df_display = df.copy()
     df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
-    # Usamos dataframe en lugar de table para que se adapte mejor al modo oscuro
     st.dataframe(df_display.sort_index(ascending=False).head(10), use_container_width=True)
     
     if st.button("🗑️ Borrar último registro"):
@@ -94,8 +105,9 @@ if not df.empty:
             st.warning("Registro eliminado")
             st.rerun()
             
+    # 8. Gráfico de estadísticas (Al final)
     st.markdown("---")
-    st.subheader("📈 ESTADÍSTICAS TOTALES")
+    st.subheader("📈 ESTADÍSTICAS TOTALES (MINUTOS)")
     stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
     st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#1d6335')
 else:
