@@ -3,24 +3,24 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 
-# Configuración con Logo de Pádel y Título
-st.set_page_config(page_title="Registro de Deporte", page_icon="🎾")
+# Configuración con tu logo personalizado
+st.set_page_config(page_title="GESPORTS - Registro", page_icon="💪")
 
-# --- CABECERA CON LOGO DE PÁDEL ---
-col_logo, col_titulo = st.columns([1, 4])
+# --- CABECERA CON TU LOGO PERSONALIZADO ---
+# Usamos el archivo local 'logo.png' que debes subir a tu GitHub
+col_logo, col_titulo = st.columns([2, 3])
 with col_logo:
-    # Icono moderno de pala de pádel
-    st.image("https://cdn-icons-png.flaticon.com/512/3257/3257127.png", width=80)
-with col_titulo:
-    st.title("REGISTRO DE ENTRENAMIENTO")
+    try:
+        st.image("logo.png", width=250)
+    except:
+        st.write("Logo GESPORTS") # Texto de respaldo si no encuentra el archivo
 
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# 1. Leer datos de Google Sheets
+# 1. Leer datos
 try:
     df = conn.read(ttl="0s")
     if not df.empty:
-        # Limpieza: Minutos a entero y Fecha a datetime
         df['Minutos'] = pd.to_numeric(df['Minutos'], errors='coerce').fillna(0).astype(int)
         df['Fecha'] = pd.to_datetime(df['Fecha'])
 except Exception as e:
@@ -34,7 +34,7 @@ with st.form(key='deporte_form'):
         fecha = st.date_input("Fecha", value=datetime.now())
         deporte = st.selectbox("Deporte", ["Padel", "Bici", "Flexiones", "Abdominales", "Running", "Gym"])
     with col2:
-        minutos = st.number_input("Minutos", min_value=1, step=1, value=90) # Puesto a 90 por defecto (partido padel)
+        minutos = st.number_input("Minutos", min_value=1, step=1, value=90)
     
     comentarios = st.text_area("Comentarios (opcional)")
     submit_button = st.form_submit_button(label='🚀 GUARDAR SESIÓN')
@@ -52,13 +52,12 @@ if submit_button:
     st.success("✅ Guardado en Google Sheets")
     st.rerun()
 
-# 3. Visualización de Tabla y Botón de Borrar
+# 3. Visualización de Tabla
 st.markdown("---")
 st.subheader("📊 ÚLTIMOS REGISTROS")
 
 if not df.empty:
     df_display = df.copy()
-    # Formateamos la fecha para que se vea limpia en la tabla
     df_display['Fecha'] = df_display['Fecha'].dt.strftime('%Y-%m-%d')
     st.table(df_display.sort_index(ascending=False).head(10))
     
@@ -69,14 +68,11 @@ if not df.empty:
             st.warning("Registro eliminado")
             st.rerun()
 
-    # 4. Sección de Gráficos (Al final de la página)
+    # 4. Sección de Gráficos (Abajo)
     st.markdown("---")
     st.subheader("📈 ESTADÍSTICAS TOTALES")
-    
-    # Agrupamos los minutos por cada deporte
     stats_deporte = df.groupby('Deporte')['Minutos'].sum().reset_index()
-    
-    # Gráfico de barras con color temático
-    st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#00A8E8') # Azul deportivo
+    # Usamos el color verde del logo para el gráfico
+    st.bar_chart(data=stats_deporte, x='Deporte', y='Minutos', color='#1d6335')
 else:
     st.info("No hay datos todavía.")
